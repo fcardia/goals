@@ -149,7 +149,7 @@ def minmax_optimization(scenarios_matrix: pd.DataFrame, desired_return: float) -
         portfolio_returns >= y_min,
         
         # 2. mu >= mu_0 (rendimento desiderato)
-        mu >= desired_return,
+        mu == desired_return,
         
         # 3. x in Q (vincoli standard di portafoglio: somma 1 e no-short)
         cp.sum(w) == 1,
@@ -226,58 +226,6 @@ def var_optimization(scenarios_matrix: pd.DataFrame, desired_return: float, beta
         print(f"Optimal VaR at {beta*100}% level: {y.value:.4f}")
         print(f"Expected Return: {mu.value:.4f}")
         print(f"Scenarios ignored: {int(np.sum(z.value))}")
-        
-        return pd.Series(optimal_w, index=scenarios_matrix.index)
-
-    return "unfeasible"
-
-def var_rev_optimization(scenarios_matrix: pd.DataFrame, min_var_return: float, beta: float=0.05) -> pd.Series:
-    n_assets, n_scenarios = scenarios_matrix.shape
-    
-    # Variabili di decisione
-    w = cp.Variable(n_assets)       
-    z = cp.Variable(n_scenarios, boolean=True) # Variabile binaria per ignorare gli scenari
-    
-    # Parametro M (Big M)
-    # Deve essere abbastanza grande da "disattivare" il vincolo per gli scenari z_t = 1
-    M = 100 
-    
-    # Probabilità degli scenari (equiprobabili)
-    p = 1.0 / n_scenarios
-    
-    # Rendimenti per scenario: y_t = sum(r_jt * x_j)
-    portfolio_returns = scenarios_matrix.values.T @ w
-    
-    # Funzione Obiettivo: Massimizzare il rendimento medio (mu)
-    mu = cp.sum(portfolio_returns) / n_scenarios
-    objective = cp.Maximize(mu)
-
-    # Vincoli basati sulla logica dell'immagine
-    constraints = [
-        # 1. Il rendimento deve essere >= min_var_return, eccetto per gli scenari "scartati" (z_t=1)
-        portfolio_returns >= min_var_return - M * z,
-        
-        # 2. La somma delle probabilità degli scenari scartati non deve superare beta
-        cp.sum(p * z) <= beta,
-        
-        # 3. Vincoli di portafoglio (x in Q)
-        cp.sum(w) == 1,
-        w >= 0
-    ]
-    
-    # Risoluzione MILP
-    problem = cp.Problem(objective, constraints)
-    problem.solve() # Nota: potrebbe essere necessario specificare solver=cp.GLPK_MI
-
-    if problem.status in ["optimal", "feasible"]:
-        optimal_w = w.value
-        actual_mu = mu.value
-        ignored = int(np.sum(z.value))
-        
-        print(f"--- Ottimizzazione Completata ---")
-        print(f"Rendimento medio massimizzato: {actual_mu:.4f}")
-        print(f"Vincolo VaR (min return al {100*(1-beta)}%): {min_var_return:.4f}")
-        print(f"Scenari ignorati (sotto la soglia): {ignored} su {n_scenarios}")
         
         return pd.Series(optimal_w, index=scenarios_matrix.index)
 
@@ -435,7 +383,7 @@ def approx_markowitz_optimization(
 
         # Vincoli
         constraints = [
-            mu >=        desired_return,
+            mu ==        desired_return,
             cp.sum(w) == 1,
             w >= 0,
             y == L.T @ w,                         # cambio variabile LDLᵀ

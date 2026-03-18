@@ -72,4 +72,3 @@ def covariance_matrix(df: pd.DataFrame, annualized: bool=True) -> pd.DataFrame:
         pd.DataFrame matrice di covarianza
     """
     return df.cov() * 252 if annualized else df.cov()
-

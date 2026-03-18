@@ -1,9 +1,9 @@
 import argparse
 import yaml
 
-from data_loader import load_data, build_scenario_matrix, compute_returns
+from data_loader import load_data, build_scenario_matrix, compute_returns, compute_annualized_returns
 from data_analysis import analyze_returns, covariance_matrix
-from optimization import mad_optimization, semi_mad_optimization, gini_optimization, minmax_optimization, var_optimization, var_rev_optimization, cvar_optimization, approx_markowitz_optimization, mean_variance_optimization
+from optimization import mad_optimization, semi_mad_optimization, gini_optimization, minmax_optimization, var_optimization, cvar_optimization, approx_markowitz_optimization, mean_variance_optimization
 from evaluation import benchmark_models
 import matplotlib.pyplot as plt 
 import numpy as np
@@ -26,9 +26,11 @@ def main(config_path: str):
         
     data = load_data(config)
     returns = compute_returns(data)
-    scenarios = build_scenario_matrix(data, n_years=10, n_scenarios=100, annualized=True)
-
+    print(returns)
+    scenarios = build_scenario_matrix(data, n_years=1, n_scenarios=100, annualized=True)
     cov_matrix = covariance_matrix(returns, annualized=True)
+
+    # cov_matrix = covariance_matrix(returns, annualized=True)
 
     start = time()
     approx_weights = approx_markowitz_optimization(scenarios, cov_matrix, desired_return=0.07, n_intervals=10)
@@ -59,7 +61,7 @@ def main(config_path: str):
     print(f"VaR time: {time()-start}\nVaR variance: {var_opt_weights.values.T @ cov_matrix @ var_opt_weights.values}", "\n\n\n")
 
     start = time()
-    cvar_opt_weights = cvar_optimization(scenarios, desired_return=0.11, beta=0.01)
+    cvar_opt_weights = cvar_optimization(scenarios, desired_return=0.07, beta=0.01)
     print(f"CVaR time: {time()-start}\nCVaR variance: {cvar_opt_weights.values.T @ cov_matrix @ cvar_opt_weights.values}", "\n\n\n")
 
     # start = time()
@@ -77,7 +79,7 @@ def main(config_path: str):
         "CVaR": cvar_opt_weights
     }
 
-    benchmarks = benchmark_models(models, scenarios)
+    benchmarks = benchmark_models(models, returns, risk_free_rate=0.02)
     print(benchmarks)
     
 if __name__ == "__main__":
